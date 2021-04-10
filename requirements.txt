@@ -1,0 +1,8 @@
+CairoSVG==2.5.2
+numpy==1.19.5
+matplotlib==3.2.2
+torch==1.7.1
+gym==0.18.0
+chess==1.4.0
+opencv_python_headless==4.5.1.48
+PyQt5==5.15.4
