@@ -101,16 +101,15 @@ for frame_idx in range(1, num_frames + 1):
     action = current_model.act(state, epsilon)
     if action < 0:
         action = env.getLegalActions()
+    else:
+        legal_moves += 1
 
     next_state, reward, done, info = env.step(action)
     replay_buffer.push(state, action, reward, next_state, done)
 
-    state = next_state  # check if grad is computed
+    state = next_state
     episode_reward += reward
-    episode_moves += 1
-
-    if info == 'legal':
-        legal_moves += 1
+    episode_moves += 1       
 
     if done:
         state = env.reset()

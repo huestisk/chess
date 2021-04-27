@@ -9,9 +9,8 @@ from chessGame import Game
 from common.chessState import ChessState
 
 # Parameters
-HEIGHT = 12
+HEIGHT = 100
 WIDTH = 64
-N_CHANNELS = 8
 
 try:
     ACTIONS = pickle.load(open("actions.pkl", "rb"))
@@ -33,9 +32,9 @@ class ChessEnv(gym.Env):
         self.game = Game('black-auto')      # TODO: add different players
         self.state = ChessState()
         self.action_space = spaces.Discrete(N_DISCRETE_ACTIONS)
-        self.observation_space = spaces.Box(low=0, high=1,
-                                            shape=(HEIGHT, WIDTH, N_CHANNELS), dtype=np.uint8)
-        
+        self.observation_space = spaces.Box(
+            low=0, high=1, shape=(HEIGHT, WIDTH), dtype=np.uint8)
+
     def step(self, action):
         done = False
         # Execute action
@@ -74,17 +73,13 @@ class ChessEnv(gym.Env):
         return self.state.get().to_dense()
 
     def getLegalActions(self):
-        # FIXME: some legal actions are not in ACTIONS (e.g. 'g7h8q')
-        legal_actions = [np.where(ACTIONS == move.uci())[0][0] 
-            for move in self.game.board.legal_moves 
-            if move.uci() in ACTIONS]  
+        legal_actions = [np.where(ACTIONS == move.uci())[0][0]
+                         for move in self.game.board.legal_moves
+                         if move.uci() in ACTIONS]
         return random.choice(legal_actions)
-
 
 
 if __name__ == "__main__":
     env = ChessEnv()
     state = env.reset()
     env.step(8)
-
-
