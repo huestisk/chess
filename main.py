@@ -1,5 +1,4 @@
 import sys
-
 from models.models import ChessNN
 
 task = sys.argv[1]
@@ -12,5 +11,7 @@ if task == 'play':
     window.show()
     app.exec()
 
-elif task == 'train':
-    import training.train   # TODO: convert to funciton to allow parameters
+elif task == 'trainDQN':
+    import training.trainDQN   # TODO: convert to funciton to allow parameters
+elif task == 'trainPriorDQN':
+    import training.trainPriorDQN
