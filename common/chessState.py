@@ -11,6 +11,9 @@ class ChessState():
     # P2 (opponent) pieces: one layer for each piece type
 
     def __init__(self, color=True):
+        self.reset(color)
+
+    def reset(self, color=True):
         self.pieces = []
         self.color = color
         self.castling = None

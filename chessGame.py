@@ -18,29 +18,35 @@ class Game():
         self.board.reset()
         self.white_next = True
 
-    def play(self, move_name=None):
+    def play(self, move=None):
         legal = False
         result = None
-        if move_name is None:
-            move = self.white.choose_move() if self.white_next else self.black.choose_move()
-        else:
-            move = chess.Move.from_uci(move_name)
-        # Play move
-        if move in self.board.legal_moves:
+        # AI plays move
+        if move is None and self.white_next and self.white is not None:
+            move = self.white.choose_move()
+        elif move is None and not self.white_next and self.black is not None:
+            move = self.black.choose_move()
+        if self.is_legal_move(move):
             legal = True
+            # Convert to chess move
+            move = chess.Move.from_uci(move) if isinstance(move, str) else move
+            # Play move
             self.board.push(move)
             self.white_next = not self.white_next
         # Check if game is over
-        if self.board.is_game_over():
-            if self.board.is_checkmate():
-                result = 1 if self.white_next else 0    # 0 if white wins, 1 if black wins
-            elif self.board.is_insufficient_material() or self.board.is_stalemate():
-                result = 2                              # draw
-        # Next is AI
+        if self.board.is_checkmate():
+            result = 1 if self.white_next else 0    # 0 if white wins, 1 if black wins
+        elif self.board.is_game_over():             # never claims draw
+            result = 2                              # draw
+        # Next is AI autoplay
         elif self.autoplay and ((self.white_next and self.white is not None) or (not self.white_next and self.black is not None)):
             return self.play()
 
         return legal, result
+
+    def is_legal_move(self, move):
+        move = chess.Move.from_uci(move) if isinstance(move, str) else move
+        return move in self.board.legal_moves
 
 
 if __name__ == '__main__':

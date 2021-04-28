@@ -1,6 +1,6 @@
 
 
-def getAllPossibleMoves():  # TODO: add underpromotions
+def getAllPossibleMoves():
     moves = set()
     rows = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
     columns = ['1', '2', '3', '4', '5', '6', '7', '8']

@@ -1,5 +1,6 @@
 import math
 import torch
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -7,12 +8,11 @@ import matplotlib.pyplot as plt
 from training.chessEnv import ChessEnv
 from models.models import ChessNN
 from common.replay_buffer import ReplayBuffer
-from common.wrappers import wrap_pytorch
 
 # Parameters
-epsilon_start = 1.0
-epsilon_final = 0.01
-epsilon_decay = 5000
+epsilon_start = 0.75
+epsilon_final = 0.0001
+epsilon_decay = 10000
 
 # GPU
 USE_CUDA = torch.cuda.is_available()
@@ -23,8 +23,10 @@ def Variable(x): return x.cuda() if USE_CUDA else x
 def update_target(current_model, target_model):
     target_model.load_state_dict(current_model.state_dict())
 
+
 def epsilon_by_frame(frame_idx):
     return epsilon_final + (epsilon_start - epsilon_final) * math.exp(-1. * frame_idx / epsilon_decay)
+
 
 def compute_td_loss(batch_size):
     state, action, reward, next_state, done = replay_buffer.sample(batch_size)
@@ -79,64 +81,73 @@ replay_buffer = ReplayBuffer(10000)
 
 update_target(current_model, target_model)  # sync nets
 
-# Training
+# Training parameters
 num_frames = 1000000
 batch_size = 32
 gamma = 0.99
-
+# Init
 losses = []
 all_rewards = []
 episode_reward = 0
+color = random.random() > 0.5 # white if True
+state = env.reset(color)
+# Info
+wins = 0
+defeats = 0
+draws = 0
+terminations = 0
+legal = 0
 
-legal_moves = 0
-games_played = 0
-finished_games = 0
-percent_legal = 0
-episode_moves = 0
-moves_per_game = []		# change to general info about game
-
-state = env.reset()
+# Training
 for frame_idx in range(1, num_frames + 1):
     epsilon = epsilon_by_frame(frame_idx)
+    # Select action
     action = current_model.act(state, epsilon)
+    # if exploring allow only some illegal moves
     if action < 0:
-        action = env.getLegalActions()
-    else:
-        legal_moves += 1
-
+        action = -action if random.random() > 0.5 else env.getLegalAction()
+    elif env.is_legal_action(action):
+        legal += 1
+    # else:
+    #     action = env.getLegalAction()   # NN actions should always be legal
+        
+    # Move action
     next_state, reward, done, info = env.step(action)
     replay_buffer.push(state, action, reward, next_state, done)
-
-    state = next_state
+    # Accumulate rewards
     episode_reward += reward
-    episode_moves += 1       
-
+    # Check if game has been terminated
     if done:
-        state = env.reset()
+        color = random.random() > 0.5 # randomly choose player color
+        state = env.reset(color)
         all_rewards.append(episode_reward)
         episode_reward = 0
-        moves_per_game.append(episode_moves)
-        episode_moves = 0
-        games_played += 1
-
+        if info == 'win':
+            wins += 1
+        elif info == 'loss':
+            defeats += 1
+        elif info == 'draw':
+            draws += 1
+        else:
+            terminations += 1
+    else:
+        state = next_state
+    # Train
     if len(replay_buffer) > batch_size:
         loss = compute_td_loss(batch_size)
         losses.append(loss.data.item())
-
+    # Save the current model
     if frame_idx % 10000 == 0:
         torch.save(current_model, "model.pkl")
-
+    # Update Target
     if frame_idx % 1000 == 0:
         update_target(current_model, target_model)
-        frames_per_game = round(frame_idx / games_played,
-                                2) if games_played != 0 else np.nan
-        print("{} frames: {} games have been played ({} frames per game), {} moves were legal ({}%).".format(
-            frame_idx, games_played, frames_per_game, legal_moves, round(
-                100 * legal_moves / frame_idx, 2)
-        ))
+        print("{} frames played: {} wins, {} losses, {} draws, {} terminations, {} legal NN moves.".format(
+            frame_idx, wins, defeats, draws, terminations, legal))
 
+
+print('Training finished.')
 torch.save(current_model, "model.pkl")
-
 
 def plot(frame_idx, rewards, losses):
     plt.figure(figsize=(20, 5))

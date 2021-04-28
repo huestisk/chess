@@ -26,7 +26,7 @@ class ChessNN(nn.Module):
     def forward(self, x):
         return self.layers(x)
 
-    def act(self, state, epsilon=1.0):
+    def act(self, state, epsilon=0.0):
         if random.random() > epsilon:
             state = Variable(torch.FloatTensor(np.float32(state))).flatten(0)
             q_value = self.forward(state)
