@@ -9,7 +9,7 @@ from chessGame import Game
 from common.chessState import ChessState
 
 # Parameters
-HEIGHT = 100
+HEIGHT = 100 - 7*12 #FIXME
 WIDTH = 64
 
 try:
@@ -20,9 +20,8 @@ except:
     pickle.dump(ACTIONS, open("actions.pkl", "wb"))
 
 N_DISCRETE_ACTIONS = ACTIONS.size
-
-# FIXME: Move reward should be changed to negative, once AI learns to do legal moves
-REWARDS = [5e-3, -1, 1, -1, 0]      # move, illegal move, win, loss, draw
+# Rewards:  move,   illegal move,   win,    loss,       draw
+REWARDS = [ 5e-3,   0,              1,      -1,         0   ]
 
 
 class ChessEnv(gym.Env):
@@ -75,7 +74,7 @@ class ChessEnv(gym.Env):
         # illegal move
         else:                       # illegal move --> TODO: change reward based on if correct piece was chosen
             reward = REWARDS[1]
-            done = True             # FIXME: should not terminate game (long term)
+            # done = True             # FIXME: should not terminate game (long term)
         # Get new state
         observation = self.getCurrentState()
         return observation, reward, done, info       

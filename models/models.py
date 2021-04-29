@@ -16,11 +16,11 @@ class ChessNN(nn.Module):
         self.num_actions = num_actions
 
         self.layers = nn.Sequential(		# TODO
-            nn.Linear(np.prod(input_shape), 512),
+            nn.Linear(np.prod(input_shape), 1024),
             nn.ReLU(),
-            nn.Linear(512, 512),
+            nn.Linear(1024, 1024),
             nn.ReLU(),
-            nn.Linear(512, self.num_actions)
+            nn.Linear(1024, self.num_actions)
         )
 
     def forward(self, x):

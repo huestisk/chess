@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-MAX_PIECE_INDEX = 8 * 12 * 64   # Timestep 8, 6 pieces per player, 64 squares
+MAX_PIECE_INDEX = 1 * 12 * 64   # FIXME: Timestep 8, 6 pieces per player, 64 squares
 BB_SQUARES = [1 << sq for sq in range(64)]
 
 
@@ -29,11 +29,11 @@ class ChessState():
         # get indices with pieces
         T = [square + 64 * (board.piece_at(square).piece_type - 1 + 6 * (not board.piece_at(square).color))
              for square in range(64) if board.piece_at(square)]
-        self.pieces = T + [x + 64 for x in self.pieces if x < MAX_PIECE_INDEX]
+        self.pieces = T # FIXME: + [x + 64 for x in self.pieces if x < MAX_PIECE_INDEX]
 
     def get(self):
         """ 8 x 6 + 4 --> 52 total layers """
-        # 8 timesteps, 6 piece types per player, 64 squares
+        # 8 timesteps, 6 piece types per player, 64 squares #FIXME: 1 timestep
         # 1 castling (which rooks can still castle)
         # 1 player color (1 if white, 0 if black)
         # 1 total move count
@@ -44,4 +44,4 @@ class ChessState():
         indices = np.array([(int(idx / 64), idx % 64) for idx in indices])
         values = np.concatenate((np.ones(len(self.pieces) + len(self.castling)), self.color * np.ones(
             64), self.moveCount * np.ones(64), self.moves_without_progress * np.ones(64)))
-        return torch.sparse_coo_tensor(indices.T, values, (100, 64))
+        return torch.sparse_coo_tensor(indices.T, values, (100 - 12*7, 64)) # FIXME: 1 timestep

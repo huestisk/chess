@@ -59,8 +59,6 @@ class NaivePrioritizedBuffer(object):
         weights  = (total * probs[indices]) ** (-beta)
         weights /= weights.max()
         weights  = np.array(weights, dtype=np.float32)
-        
-        batch       = zip(*samples)
 
         state, action, reward, next_state, done = zip(*samples)
         return np.concatenate(state), action, reward, np.concatenate(next_state), done, indices, weights

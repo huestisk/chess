@@ -10,11 +10,11 @@ from models.models import ChessNN
 from common.replay_buffer import ReplayBuffer
 
 # Parameters
-epsilon_start = 0.75
-epsilon_final = 0.0001
+epsilon_start = 1.0
+epsilon_final = 0.01
 epsilon_decay = 10000
 
-# GPU
+# Use GPU, if available
 USE_CUDA = torch.cuda.is_available()
 def Variable(x): return x.cuda() if USE_CUDA else x
 
@@ -22,10 +22,8 @@ def Variable(x): return x.cuda() if USE_CUDA else x
 def update_target(current_model, target_model):
     target_model.load_state_dict(current_model.state_dict())
 
-
 def epsilon_by_frame(frame_idx):
     return epsilon_final + (epsilon_start - epsilon_final) * math.exp(-1. * frame_idx / epsilon_decay)
-
 
 def compute_td_loss(batch_size):
     state, action, reward, next_state, done = replay_buffer.sample(batch_size)
@@ -45,7 +43,8 @@ def compute_td_loss(batch_size):
         1, torch.max(next_q_values, 1)[1].unsqueeze(1)).squeeze(1)
     expected_q_value = reward + gamma * next_q_value * (1 - done)
 
-    loss = (q_value - Variable(expected_q_value.data)).pow(2).mean()
+    loss = (q_value - Variable(expected_q_value.data)).pow(2)
+    loss = loss.mean()
 
     optimizer.zero_grad()
     loss.backward()
@@ -53,19 +52,28 @@ def compute_td_loss(batch_size):
 
     return loss
 
+def plot(frame_idx, rewards, losses):
+    plt.figure(figsize=(20, 5))
+    plt.subplot(121)
+    plt.title('frame %s. reward: %s' % (frame_idx, np.mean(rewards[-10:])))
+    plt.plot(rewards)
+    plt.subplot(122)
+    plt.title('loss')
+    plt.plot(losses)
+    plt.show()
 
 # Init
 env = ChessEnv()
 
 try:
     if USE_CUDA:
-        current_model = torch.load("model.pkl")
-        target_model = torch.load("model.pkl")
+        current_model = torch.load("models/model.pkl")
+        target_model = torch.load("models/model.pkl")
     else:
         current_model = torch.load(
-            "model.pkl", map_location={'cuda:0': 'cpu'})
+            "models/model.pkl", map_location={'cuda:0': 'cpu'})
         target_model = torch.load(
-            "model.pkl", map_location={'cuda:0': 'cpu'})
+            "models/model.pkl", map_location={'cuda:0': 'cpu'})
 except:
     current_model = ChessNN(env.observation_space.shape, env.action_space.n)
     target_model = ChessNN(env.observation_space.shape, env.action_space.n)
@@ -88,7 +96,7 @@ gamma = 0.99
 losses = []
 all_rewards = []
 episode_reward = 0
-color = random.random() > 0.5 # white if True
+color = True # random.random() > 0.5 # white if True
 state = env.reset(color)
 # Info
 wins = 0
@@ -104,7 +112,7 @@ for frame_idx in range(1, num_frames + 1):
     action = current_model.act(state, epsilon)
     # if exploring allow only some illegal moves
     if action < 0:
-        action = -action if random.random() > 0.5 else env.getLegalAction()
+        action = -action if random.random() > 0.8 else env.getLegalAction()
     elif env.is_legal_action(action):
         legal += 1
     # else:
@@ -117,7 +125,7 @@ for frame_idx in range(1, num_frames + 1):
     episode_reward += reward
     # Check if game has been terminated
     if done:
-        color = random.random() > 0.5 # randomly choose player color
+        color = True #random.random() > 0.5 # randomly choose player color
         state = env.reset(color)
         all_rewards.append(episode_reward)
         episode_reward = 0
@@ -132,12 +140,13 @@ for frame_idx in range(1, num_frames + 1):
     else:
         state = next_state
     # Train
-    if len(replay_buffer) > batch_size:
+    if len(replay_buffer) > 100:
         loss = compute_td_loss(batch_size)
         losses.append(loss.data.item())
     # Save the current model
     if frame_idx % 10000 == 0:
-        torch.save(current_model, "model.pkl")
+        torch.save(current_model, "models/model.pkl")
+        plot(frame_idx, all_rewards, losses)
     # Update Target
     if frame_idx % 1000 == 0:
         update_target(current_model, target_model)
@@ -146,17 +155,6 @@ for frame_idx in range(1, num_frames + 1):
 
 
 print('Training finished.')
-torch.save(current_model, "model.pkl")
-
-def plot(frame_idx, rewards, losses):
-    plt.figure(figsize=(20, 5))
-    plt.subplot(121)
-    plt.title('frame %s. reward: %s' % (frame_idx, np.mean(rewards[-10:])))
-    plt.plot(rewards)
-    plt.subplot(122)
-    plt.title('loss')
-    plt.plot(losses)
-    plt.show()
-
+torch.save(current_model, "models/model.pkl")
 
 plot(frame_idx, all_rewards, losses)

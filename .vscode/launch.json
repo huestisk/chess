@@ -27,7 +27,7 @@
             "request": "launch",
             "program": "main.py",
             "args": [
-                "trainPriorDQN"
+                "trainDQN"
             ],
             "console": "integratedTerminal"
         }
