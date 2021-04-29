@@ -26,7 +26,7 @@ class Game():
             move = self.white.choose_move()
         elif move is None and not self.white_next and self.black is not None:
             move = self.black.choose_move()
-        if self.is_legal_move(move):
+        if self.is_legal_move(move) or move == '0000':  # null move is allowed
             legal = True
             # Convert to chess move
             move = chess.Move.from_uci(move) if isinstance(move, str) else move
@@ -53,8 +53,5 @@ if __name__ == '__main__':
 
     game = Game('manual')
     mate_sequence = ['e2e4', 'e7e5', 'd1h5', 'e8e7', 'h5e5']
-    white_sequence = mate_sequence[::2]
-    black_sequence = mate_sequence[1::2]
-
     for move in mate_sequence:
         game.play(move)

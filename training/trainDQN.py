@@ -63,7 +63,7 @@ def plot(frame_idx, rewards, losses):
     plt.show()
 
 # Init
-env = ChessEnv()
+env = ChessEnv(simple=True)     # Opponent does not move
 
 try:
     if USE_CUDA:
@@ -115,8 +115,6 @@ for frame_idx in range(1, num_frames + 1):
         action = -action if random.random() > 0.8 else env.getLegalAction()
     elif env.is_legal_action(action):
         legal += 1
-    # else:
-    #     action = env.getLegalAction()   # NN actions should always be legal
         
     # Move action
     next_state, reward, done, info = env.step(action)
@@ -146,7 +144,7 @@ for frame_idx in range(1, num_frames + 1):
     # Save the current model
     if frame_idx % 10000 == 0:
         torch.save(current_model, "models/model.pkl")
-        plot(frame_idx, all_rewards, losses)
+        # plot(frame_idx, all_rewards, losses)
     # Update Target
     if frame_idx % 1000 == 0:
         update_target(current_model, target_model)

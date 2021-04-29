@@ -83,6 +83,7 @@ class MainWindow(QWidget):
         try:
             legal, result = self.game.play(self.next_move)
         except ValueError: # User clicked on same square twice
+            # legal, result = self.game.play('0000')
             return
 
         if legal:

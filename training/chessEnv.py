@@ -9,7 +9,7 @@ from chessGame import Game
 from common.chessState import ChessState
 
 # Parameters
-HEIGHT = 100 - 7*12 #FIXME
+HEIGHT = 100 - 7*12  # FIXME
 WIDTH = 64
 
 try:
@@ -21,16 +21,17 @@ except:
 
 N_DISCRETE_ACTIONS = ACTIONS.size
 # Rewards:  move,   illegal move,   win,    loss,       draw
-REWARDS = [ 5e-3,   0,              1,      -1,         0   ]
+REWARDS = [5e-3,   -1e3,              1,      -1,         0]
 
 
 class ChessEnv(gym.Env):
 
-    def __init__(self, color=True):
+    def __init__(self, color=True, simple=False):
         super(ChessEnv, self).__init__()
         self.action_space = spaces.Discrete(N_DISCRETE_ACTIONS)
         self.observation_space = spaces.Box(
             low=0, high=1, shape=(HEIGHT, WIDTH), dtype=np.uint8)
+        self.simple = simple
         self.reset(color)
 
     def reset(self, color=True):
@@ -40,7 +41,10 @@ class ChessEnv(gym.Env):
         else:       # p1 is black
             self.game = Game('white-auto', autoplay=False)
             self.state.update(self.game.board)  # Add inital board to state
-            self.game.play()
+            if self.simple:
+                self.game.play('0000')
+            else:
+                self.game.play()    # AI
         return self.getCurrentState()
 
     def step(self, action):
@@ -52,7 +56,10 @@ class ChessEnv(gym.Env):
         # Opponent plays
         if legal and result is None:
             self.state.update(self.game.board)
-            _, result = self.game.play()
+            if self.simple:
+                _, result = self.game.play('0000')
+            else:
+                _, result = self.game.play()
         # Choose Reward
         if result is not None:
             done = True
@@ -60,7 +67,7 @@ class ChessEnv(gym.Env):
             if (result == 0 and self.state.color) or (result == 1 and not self.state.color):
                 info = 'win'
                 reward = REWARDS[2]
-            # black wins
+            # p2 wins
             elif (result == 1 and self.state.color) or (result == 0 and not self.state.color):
                 info = 'loss'
                 reward = REWARDS[3]
@@ -72,12 +79,11 @@ class ChessEnv(gym.Env):
         elif legal:
             reward = REWARDS[0]
         # illegal move
-        else:                       # illegal move --> TODO: change reward based on if correct piece was chosen
+        else:
             reward = REWARDS[1]
-            # done = True             # FIXME: should not terminate game (long term)
         # Get new state
         observation = self.getCurrentState()
-        return observation, reward, done, info       
+        return observation, reward, done, info
 
     def getCurrentState(self):
         self.state.update(self.game.board)
@@ -92,6 +98,20 @@ class ChessEnv(gym.Env):
                          for move in self.game.board.legal_moves
                          if move.uci() in ACTIONS]
         return random.choice(legal_actions) if len(legal_actions) > 0 else 0
+
+    # Debug
+    def visualize(self):
+        mat = np.zeros((8,8))
+        board = self.game.board
+        for i in range(8):
+            for j in range(8):
+                square = i * 8 + j
+                if board.piece_at(square) and board.piece_at(square).color: # white piece
+                    mat[i][j] = board.piece_at(square).piece_type
+                elif board.piece_at(square): # black piece
+                    mat[i][j] = - board.piece_at(square).piece_type
+        print(mat[::-1])
+
 
 
 if __name__ == "__main__":
