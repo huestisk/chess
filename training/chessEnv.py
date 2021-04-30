@@ -8,10 +8,6 @@ from gym import spaces
 from chessGame import Game
 from common.chessState import ChessState
 
-# Parameters
-HEIGHT = 100 - 7*12  # FIXME
-WIDTH = 64
-
 try:
     ACTIONS = pickle.load(open("actions.pkl", "rb"))
 except:
@@ -20,22 +16,22 @@ except:
     pickle.dump(ACTIONS, open("actions.pkl", "wb"))
 
 N_DISCRETE_ACTIONS = ACTIONS.size
-# Rewards:  move,   illegal move,   win,    loss,       draw
-REWARDS = [5e-3,   -1e3,              1,      -1,         0]
 
 
 class ChessEnv(gym.Env):
 
-    def __init__(self, color=True, simple=False):
+    def __init__(self, rewards, color=True, simple=False):
         super(ChessEnv, self).__init__()
+        self.state = ChessState(color)
         self.action_space = spaces.Discrete(N_DISCRETE_ACTIONS)
         self.observation_space = spaces.Box(
-            low=0, high=1, shape=(HEIGHT, WIDTH), dtype=np.uint8)
+            low=0, high=1, shape=(self.state.shape,), dtype=np.uint8)
         self.simple = simple
         self.reset(color)
+        self.rewards = rewards
 
     def reset(self, color=True):
-        self.state = ChessState(color)
+        self.state.reset(color)
         if color:   # p1 is white
             self.game = Game('black-auto', autoplay=False)
         else:       # p1 is black
@@ -66,28 +62,29 @@ class ChessEnv(gym.Env):
             # p1 wins
             if (result == 0 and self.state.color) or (result == 1 and not self.state.color):
                 info = 'win'
-                reward = REWARDS[2]
+                reward = self.rewards[2]
             # p2 wins
             elif (result == 1 and self.state.color) or (result == 0 and not self.state.color):
                 info = 'loss'
-                reward = REWARDS[3]
+                reward = self.rewards[3]
             # draw
             elif result == 2:
                 info = 'draw'
-                reward = REWARDS[4]
+                reward = self.rewards[4]
         # legal, non-terminal move
         elif legal:
-            reward = REWARDS[0]
+            reward = self.rewards[0]
         # illegal move
         else:
-            reward = REWARDS[1]
+            reward = self.rewards[1]
+            # done = True     # end on illegal move
         # Get new state
         observation = self.getCurrentState()
         return observation, reward, done, info
 
     def getCurrentState(self):
         self.state.update(self.game.board)
-        return self.state.get().to_dense()
+        return self.state.get()
 
     def is_legal_action(self, action):
         action = ACTIONS[action] if isinstance(action, int) else action
@@ -101,17 +98,10 @@ class ChessEnv(gym.Env):
 
     # Debug
     def visualize(self):
-        mat = np.zeros((8,8))
         board = self.game.board
-        for i in range(8):
-            for j in range(8):
-                square = i * 8 + j
-                if board.piece_at(square) and board.piece_at(square).color: # white piece
-                    mat[i][j] = board.piece_at(square).piece_type
-                elif board.piece_at(square): # black piece
-                    mat[i][j] = - board.piece_at(square).piece_type
-        print(mat[::-1])
-
+        mat = np.array([board.piece_at(square).symbol() if board.piece_at(
+            square) else ' ' for square in range(64)])
+        print(mat.reshape(8, 8)[::-1])
 
 
 if __name__ == "__main__":

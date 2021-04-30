@@ -1,4 +1,7 @@
 *.pkl
+*.bak
+*.txt
+*.png
 .vscode/settings.json
 
 # Byte-compiled / optimized / DLL files
