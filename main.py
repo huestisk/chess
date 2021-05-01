@@ -7,10 +7,12 @@ if task.startswith('train'):
     if task == 'trainDQN':
         from training.trainDQN import DQN
         trainer = DQN()
-
     elif task == 'trainPriorDQN':
         from training.trainPriorDQN import PriorDQN
         trainer = PriorDQN()
+    elif task == 'trainRainbow':
+        from training.trainRainbow import Rainbow
+        trainer = Rainbow()
 
     trainer.train()
 

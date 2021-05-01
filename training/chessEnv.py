@@ -84,10 +84,15 @@ class ChessEnv(gym.Env):
 
     def getCurrentState(self):
         self.state.update(self.game.board)
-        return self.state.get()
+        state = self.state.get()
+        # reconstruct board
+        # board = state[:12*64].reshape((12,64))
+        # board = np.sum([(idx+1)*val for idx, val in enumerate(board)], axis=0)
+        # board = board.reshape((8,8))[::-1]
+        return state
 
     def is_legal_action(self, action):
-        action = ACTIONS[action] if isinstance(action, int) else action
+        action = ACTIONS[action] if isinstance(action, int) or isinstance(action, np.int64)  else action
         return self.game.is_legal_move(action)
 
     def getLegalAction(self):

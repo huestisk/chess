@@ -16,9 +16,7 @@
             "type": "python",
             "request": "launch",
             "program": "main.py",
-            "args": [
-                "play"
-            ],
+            "args": ["play"],
             "console": "integratedTerminal"
         },
         {
@@ -26,9 +24,7 @@
             "type": "python",
             "request": "launch",
             "program": "main.py",
-            "args": [
-                "trainDQN"
-            ],
+            "args": ["trainRainbow"],
             "console": "integratedTerminal"
         }
     ]

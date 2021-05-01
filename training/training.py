@@ -23,12 +23,11 @@ epsilon_final = 0.01
 epsilon_decay = 500000
 
 beta_start = 0.4
-beta_frames = 1000
+beta_frames = 100000
 alpha = 0.6
 
 # Rewards:     move,   illegal,    win,    loss,   draw
-rewards = [    1e-3,   -1e-3,      1,      -1,     0   ]
-
+rewards = [    1e-4,    0,          1,      -1,     0   ]
 
 def epsilon_by_frame(frame_idx):
     decay = math.exp(-1. * frame_idx / epsilon_decay)
@@ -114,8 +113,8 @@ class Trainer():
             action = self.current_model.act(state, epsilon)
             # if exploring allow only some illegal moves
             if action < 0:
-                # action = -action if random.random() > 0.5 else env.getLegalAction()
-                action = self.env.getLegalAction()
+                action = -action if random.random() > 0.5 else self.env.getLegalAction()
+                # action = self.env.getLegalAction()
             elif self.env.is_legal_action(action):
                 legal += 1
             # Move action
@@ -124,6 +123,7 @@ class Trainer():
             # Count illegal moves
             if info.startswith('illegal'):
                 illegal += 1
+                done =  True    #FIXME
             # Accumulate rewards
             episode_reward += reward
             # Check if game has been terminated

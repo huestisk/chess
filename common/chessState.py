@@ -58,7 +58,10 @@ class ChessState():
         else:
             return np.concatenate((pieces, np.zeros(MAX_PIECE_INDEX-len(pieces), )))
 
-    def visualize(self, board):
-        mat = np.array([board.piece_at(square).symbol() if board.piece_at(
-            square) else ' ' for square in range(64)])
-        print(mat.reshape(8, 8)[::-1])
+    def visualize(self, board=None):
+        if board is not None:
+            mat = np.array([board.piece_at(square).symbol() if board.piece_at(
+                square) else ' ' for square in range(64)])
+            return mat.reshape(8, 8)[::-1]
+        else:
+            return self.boards[1][::-1]

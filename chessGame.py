@@ -1,7 +1,6 @@
 import chess
 from chessAI import ChessAI
 
-
 class Game():
 
     def __init__(self, game_mode, autoplay=True):

@@ -3,6 +3,7 @@
 *.txt
 *.png
 .vscode/settings.json
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
