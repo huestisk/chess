@@ -24,7 +24,7 @@
             "type": "python",
             "request": "launch",
             "program": "main.py",
-            "args": ["trainRainbow"],
+            "args": ["trainDQN"],
             "console": "integratedTerminal"
         }
     ]

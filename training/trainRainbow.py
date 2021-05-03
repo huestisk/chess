@@ -23,8 +23,8 @@ Vmax = 10
 
 class Rainbow(Trainer):
 
-    def __init__(self):
-        super(Rainbow, self).__init__()
+    def __init__(self, parameters):
+        super(Rainbow, self).__init__(parameters)
         self.replay_buffer = ReplayBuffer(self.buffersize)
 
     def push_to_buffer(self, state, action, reward, next_state, done):

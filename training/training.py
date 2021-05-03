@@ -11,63 +11,43 @@ from models.models import ChessNN
 # Use GPU, if available
 USE_CUDA = torch.cuda.is_available()
 
-# Training parameters
-num_frames = 1000000
-batch_size = 32
-gamma = 0.99
-
-buffersize = 50000
-
-epsilon_start = 1.0
-epsilon_final = 0.01
-epsilon_decay = 500000
-
-beta_start = 0.4
-beta_frames = 100000
-alpha = 0.6
-
-# Rewards:     move,   illegal,    win,    loss,   draw
-rewards = [    1e-4,    0,          1,      -1,     0   ]
-
-def epsilon_by_frame(frame_idx):
-    decay = math.exp(-1. * frame_idx / epsilon_decay)
-    return epsilon_final + (epsilon_start - epsilon_final) * decay
-
-
-def beta_by_frame(frame_idx):
-    beta = beta_start + frame_idx * (1.0 - beta_start) / beta_frames
-    return min(1.0, beta)
-
 
 class Trainer():
 
-    def __init__(self):
-        self.env = ChessEnv(rewards, simple=True)     # Opponent does not move
+    def __init__(self, parameters, simple=True):
+        self.env = ChessEnv(parameters["rewards"], simple=simple)     # Opponent does not move
         self.load_model()
         self.optimizer = torch.optim.Adam(self.current_model.parameters())
-        self.buffersize = buffersize
-        self.alpha = alpha
-        self.gamma = gamma
+
+        self.num_frames = parameters["num_frames"]
+        self.buffersize = parameters["buffersize"]
+        self.batch_size = parameters["batch_size"]
+
+        self.gamma = parameters["gamma"]
+
+        self.epsilon_start = parameters["epsilon_start"]
+        self.epsilon_final = parameters["epsilon_final"]
+        self.epsilon_decay = parameters["epsilon_decay"]
 
     def load_model(self):
-        try:
-            if USE_CUDA:
-                self.current_model = torch.load("models/model.pkl")
-                self.target_model = torch.load("models/model.pkl")
-            else:
-                self.current_model = torch.load(
-                    "models/model.pkl", map_location={'cuda:0': 'cpu'})
-                self.target_model = torch.load(
-                    "models/model.pkl", map_location={'cuda:0': 'cpu'})
-        except:
-            self.current_model = ChessNN(
-                self.env.observation_space.shape, self.env.action_space.n)
-            self.target_model = ChessNN(
-                self.env.observation_space.shape, self.env.action_space.n)
+        # try:
+        #     if USE_CUDA:
+        #         self.current_model = torch.load("models/model.pkl")
+        #         self.target_model = torch.load("models/model.pkl")
+        #     else:
+        #         self.current_model = torch.load(
+        #             "models/model.pkl", map_location={'cuda:0': 'cpu'})
+        #         self.target_model = torch.load(
+        #             "models/model.pkl", map_location={'cuda:0': 'cpu'})
+        # except:
+        self.current_model = ChessNN(
+            self.env.observation_space.shape, self.env.action_space.n)
+        self.target_model = ChessNN(
+            self.env.observation_space.shape, self.env.action_space.n)
 
-            if USE_CUDA:
-                self.current_model = self.current_model.cuda()
-                self.target_model = self.target_model.cuda()
+        if USE_CUDA:
+            self.current_model = self.current_model.cuda()
+            self.target_model = self.target_model.cuda()
 
         self.update_target(self.current_model, self.target_model)  # sync nets
 
@@ -83,6 +63,10 @@ class Trainer():
         plt.title('loss')
         plt.plot(losses)
         plt.show()
+
+    def epsilon_by_frame(self, frame_idx):
+        decay = math.exp(-1. * frame_idx / self.epsilon_decay)
+        return self.epsilon_final + (self.epsilon_start - self.epsilon_final) * decay
 
     def push_to_buffer(self, *args):
         pass
@@ -102,28 +86,31 @@ class Trainer():
         wins = 0
         defeats = 0
         draws = 0
-        terminations = 0
-        legal = 0
+        legalNN = 0
         illegal = 0
+        illegalNN = 0
 
         # Training
-        for frame_idx in range(1, num_frames + 1):
-            epsilon = epsilon_by_frame(frame_idx)
+        for frame_idx in range(1, self.num_frames + 1):
+            epsilon = self.epsilon_by_frame(frame_idx)
             # Select action
             action = self.current_model.act(state, epsilon)
             # if exploring allow only some illegal moves
             if action < 0:
-                action = -action if random.random() > 0.5 else self.env.getLegalAction()
+                action = -action if random.random() > 0.8 else self.env.getLegalAction()
                 # action = self.env.getLegalAction()
             elif self.env.is_legal_action(action):
-                legal += 1
+                legalNN += 1
+            else:
+                illegalNN += 1
             # Move action
             next_state, reward, done, info = self.env.step(action)
-            self.push_to_buffer(state, action, reward, next_state, done)
             # Count illegal moves
             if info.startswith('illegal'):
                 illegal += 1
-                done =  True    #FIXME
+                # if frame_idx < 30000: 
+                #     done = True  # FIXME: Can learn this way, but only because states are always "the same"
+            self.push_to_buffer(state, action, reward, next_state, done)
             # Accumulate rewards
             episode_reward += reward
             # Check if game has been terminated
@@ -138,23 +125,25 @@ class Trainer():
                     defeats += 1
                 elif info == 'draw':
                     draws += 1
-                else:
-                    terminations += 1
             else:
                 state = next_state
             # Train
-            beta = beta_by_frame(frame_idx)
-            loss = self.compute_td_loss(batch_size, beta)
+            loss = self.compute_td_loss(self.batch_size, frame_idx)
             if loss is not None:
                 losses.append(loss.data.item())
-            # Save the current model
-            if frame_idx % 10000 == 0:
-                torch.save(self.current_model, "models/model.pkl")
             # Update Target
             if frame_idx % 1000 == 0:
                 self.update_target(self.current_model, self.target_model)
-                print("{} frames played: {} wins, {} losses, {} draws, {} terminations, {} legal NN moves, {} illegal moves.".format(
-                    frame_idx, wins, defeats, draws, terminations, legal, illegal))
+                print("{} frames played: {} wins, {} losses, {} draws, {}% illegal, {} legal NN moves ({}%)".format(
+                    frame_idx, wins, defeats, draws, 
+                    round(100 * illegal / 1000, 2), legalNN, 
+                    round(100 * legalNN / (legalNN + illegalNN), 2)))
+                illegal = 0
+                legalNN = 0
+                illegalNN = 0
+            # Save the current model
+            if frame_idx % 10000 == 0:
+                torch.save(self.current_model, "models/model.pkl")
 
         torch.save(self.current_model, "models/model.pkl")
         print('Training finished.')

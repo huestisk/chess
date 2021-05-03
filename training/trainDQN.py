@@ -11,8 +11,8 @@ def Variable(x): return x.cuda() if USE_CUDA else x
 
 class DQN(Trainer):
 
-    def __init__(self):
-        super(DQN, self).__init__()
+    def __init__(self, parameters):
+        super(DQN, self).__init__(parameters)
         self.replay_buffer = ReplayBuffer(self.buffersize)
 
     def push_to_buffer(self, state, action, reward, next_state, done):
@@ -28,16 +28,19 @@ class DQN(Trainer):
         reward = Variable(torch.FloatTensor(reward))
         done = Variable(torch.FloatTensor(done))
 
-        q_values            = self.current_model(state)
+        q_values = self.current_model(state)
         q_value = q_values.gather(1, action.unsqueeze(1)).squeeze(1)
 
-        next_q_values       = self.current_model(next_state)
+        next_q_values = self.current_model(next_state)
         next_q_state_values = self.target_model(next_state)
-        next_q_value = next_q_state_values.gather(1, torch.max(next_q_values, 1)[1].unsqueeze(1)).squeeze(1)
-        
+        next_q_value = next_q_state_values.gather(
+            1, torch.max(next_q_values, 1)[1].unsqueeze(1)).squeeze(1)
+
         expected_q_value = reward + self.gamma * next_q_value * (1 - done)
 
-        loss = (q_value - Variable(expected_q_value.data)).pow(2)
+        loss = q_value - Variable(expected_q_value.data)
+        loss[loss.le(1)] = loss[loss.le(1)].pow(2)
+        loss[loss.gt(1)] = (loss[loss.gt(1)].abs() + 1) / 2
         loss = loss.mean()
 
         self.optimizer.zero_grad()
