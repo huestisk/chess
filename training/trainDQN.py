@@ -38,9 +38,9 @@ class DQN(Trainer):
 
         expected_q_value = reward + self.gamma * next_q_value * (1 - done)
 
-        loss = q_value - Variable(expected_q_value.data)
+        loss = (q_value - Variable(expected_q_value.data)).abs()
         loss[loss.le(1)] = loss[loss.le(1)].pow(2)
-        loss[loss.gt(1)] = (loss[loss.gt(1)].abs() + 1) / 2
+        loss[loss.gt(1)] = 1 #(loss[loss.gt(1)] + 1) / 2
         loss = loss.mean()
 
         self.optimizer.zero_grad()

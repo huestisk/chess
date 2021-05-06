@@ -45,12 +45,12 @@ class ChessEnv(gym.Env):
 
     def step(self, action):
         done = False
+        info = dict()
         # Execute action
         move_name = ACTIONS[action]
-        legal, result = self.game.play(move_name)
-        info = 'legal' if legal else 'illegal'
+        info['legal'], result = self.game.play(move_name)
         # Opponent plays
-        if legal and result is None:
+        if info['legal'] and result is None:
             self.state.update(self.game.board)
             if self.simple:
                 _, result = self.game.play('0000')
@@ -61,23 +61,22 @@ class ChessEnv(gym.Env):
             done = True
             # p1 wins
             if (result == 0 and self.state.color) or (result == 1 and not self.state.color):
-                info = 'win'
+                info['result'] = 'win'
                 reward = self.rewards[2]
             # p2 wins
             elif (result == 1 and self.state.color) or (result == 0 and not self.state.color):
-                info = 'loss'
+                info['result'] = 'loss'
                 reward = self.rewards[3]
             # draw
             elif result == 2:
-                info = 'draw'
+                info['result'] = 'draw'
                 reward = self.rewards[4]
         # legal, non-terminal move
-        elif legal:
+        elif info['legal']:
             reward = self.rewards[0]
         # illegal move
         else:
             reward = self.rewards[1]
-            # done = True     # end on illegal move
         # Get new state
         observation = self.getCurrentState()
         return observation, reward, done, info

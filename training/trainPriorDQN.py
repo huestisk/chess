@@ -56,12 +56,14 @@ class PriorDQN(Trainer):
         expected_q_value = reward + self.gamma * next_q_value * (1 - done)
 
         loss = (q_value - Variable(expected_q_value.data)).pow(2) * weights
+        loss[loss.gt(1)] = 1
         prios = loss + 1e-5
         loss = loss.mean()
 
         self.optimizer.zero_grad()
         loss.backward()
-        self.replay_buffer.update_priorities(indices, prios.data.cpu().numpy())
         self.optimizer.step()
 
+        self.replay_buffer.update_priorities(indices, prios.data.cpu().numpy())
+        
         return loss

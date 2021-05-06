@@ -18,12 +18,16 @@ class ChessNN(nn.Module):
         self.input_shape = input_shape
         self.num_actions = num_actions
 
+        # self.layers = nn.Sequential(
+        #     nn.Linear(np.prod(input_shape), 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, self.num_actions)
+        # )
+
         self.layers = nn.Sequential(
-            nn.Linear(np.prod(input_shape), 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, self.num_actions)
+            nn.Linear(np.prod(input_shape), self.num_actions)
         )
 
     def forward(self, x):
@@ -35,8 +39,8 @@ class ChessNN(nn.Module):
             q_value = self.forward(state)
             action = q_value.max(0)[1].item()
         else:
-            # negative actions must be caught
-            action = - random.randrange(self.num_actions)
+            # negative SHIFTED actions must be caught
+            action = - random.randrange(self.num_actions) - 1
         return action
 
 
