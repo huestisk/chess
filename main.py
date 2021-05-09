@@ -1,7 +1,10 @@
 import sys
 from models.models import ChessNN
 
-task = sys.argv[1]
+if len(sys.argv) > 1:
+    task = sys.argv[1]
+else:
+    task = 'play'
 
 if task.startswith('train'):
     if task == 'trainDQN':
@@ -16,7 +19,7 @@ if task.startswith('train'):
 
     trainer.train()
 
-if task == 'play':
+elif task == 'play':
     from GUI import MainWindow
     from PyQt5.QtWidgets import QApplication
 
